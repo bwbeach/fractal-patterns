@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import abc
 import itertools
 import math
 
@@ -29,56 +30,53 @@ class Point:
         return Point(c * self.x + s * self.y, -s * self.x + c * self.y)
 
 
-def fractal(p1, p2, f, depth):
+class LineSegment:
+    """
+    A line segment from one point to another.
+    """
+
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+
+
+
+def fractal(elem, f, depth):
+    """
+    Given a single element, returns the list of elements that replace it.
+    :param elem:
+    :param f:
+    :param depth:
+    :return:
+    """
     if depth == 0:
-        return [p1, p2]
+        return [elem]
     else:
-        points = f(p1, p2)
-        sequences = [
-            fractal(a, b, f, depth - 1)
-            for a, b in itertools.pairwise(points)
-        ]
-        result = [p1]
-        for s in sequences:
-            result = result + s[1:]
-        return result
+        sub_elems = f(elem)
+        return list(itertools.chain(*(fractal(e, f, depth - 1) for e in sub_elems)))
 
 
-def no_op(p1, p2):
-    return [p1, p2]
-
-
-def half(p1, p2):
-    mid = (p1 + p2) * 0.5
-    return [p1, mid, p2]
-
-
-def zigzag(p1, p2):
-    v = p2 - p1
-    left = (v * (math.sqrt(2) / 3)).left(math.pi / 4)
-    return [p1, p1 + left, p2 - left, p2]
-
-
-def left_square(p1, p2):
-    v = p2 - p1
-    q = v * 0.25
-    left = q.left(math.pi / 2)
-    return [p1, p1 + q, p1 + q + left, p1 + q*3 + left * -1, p1 + q*3, p2]
-
-
-def left_triangle(p1, p2):
+def left_triangle(elem):
     """
-    Each line segment owns a right equilateral triange on its left side.
+    Each line segment owns a right equilateral triangle on its left side.
     """
+    p1 = elem.p1
+    p2 = elem.p2
     fwd = (p2 - p1) * 0.5
     left = fwd.left(math.pi / 2)
     mid = p1 + fwd
     up = mid + left
-    return [p1, mid, up, mid, p2]
+    return [
+        LineSegment(p1, mid),
+        LineSegment(mid, up),
+        LineSegment(up, mid),
+        LineSegment(mid, p2)
+    ]
 
 
 def make_pattern():
-    points = fractal(Point(25, 50), Point(75, 50), left_triangle, 1)
+    elems = fractal(LineSegment(Point(25, 50), Point(75, 50)), left_triangle, 1)
+    points = [elems[0].p1] + [e.p2 for e in elems]  # TODO: make render step
     point_strings = [
         "%6.3f,%6.3f" % (p.x, p.y)
         for p in points
