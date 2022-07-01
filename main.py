@@ -10,7 +10,7 @@ import itertools
 import math
 
 PRE = """<?xml version="1.0"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="203.200mm" height="203.200mm" viewBox="0.000,0.000,100.000,100.000">"""
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="200.000mm" height="200.000mm" viewBox="0.000,0.000,100.000,100.000">"""
 
 POST = "</svg>"
 
@@ -39,6 +39,9 @@ class Point:
 
     def right(self, angle):
         return self.left(-angle)
+
+    def as_string_with_comma(self):
+        return "%6.3f,%6.3f" % (self.x, self.y)
 
 
 class LineSegment:
@@ -125,17 +128,39 @@ def left_triangle(elem):
     ]
 
 
+def segments_to_points(segments):
+    """
+    Maps from a list of segments to a list of points.
+    """
+    # We assume that the ending point of one segment is the same
+    # as the starting point of the next segment.
+    assert all(a.p2 == b.p1 for (a, b) in itertools.pairwise(segments))
+
+    # The first point is the start point of the first segment
+    result = [segments[0].p1]
+    for s in segments:
+        result.append(s.p2)
+    return result
+
+
+def points_to_stroke_d(points):
+    """
+    Converts a sequence of points to the "d" attribute for an SVG stroke.
+    """
+    parts = ["M", points[0].as_string_with_comma()]
+    for p in points:
+        parts.append("L")
+        parts.append(p.as_string_with_comma())
+    return " ".join(parts)
+
+
 def make_pattern():
     # elems = fractal(LineSegment(Point(25, 50), Point(75, 50)), left_triangle, 1)
-    init = SidedSegment(Point(25, 75), Point(75, 75), "left")
-    elems = fractal(init, SidedSegment.up_half_across_and_down, 6)
-    points = [elems[0].p1] + [e.p2 for e in elems]  # TODO: make render step
-    point_strings = [
-        "%6.3f,%6.3f" % (p.x, p.y)
-        for p in points
-    ]
-    path = "M " + " L ".join(point_strings)
-    path_element = '<path stroke="#000000" fill="none" stroke-width="0.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10.000" d="%s"/>' % path
+    init = SidedSegment(Point(0, 100), Point(100, 100), "left")
+    elems = fractal(init, SidedSegment.up_half_across_and_down, 5)
+    points = segments_to_points(elems)
+    d = points_to_stroke_d(points)
+    path_element = '<path stroke="#000000" fill="none" stroke-width="0.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10.000" d="%s"/>' % d
     svg = PRE + path_element + POST
     file_name = "/Users/brianb/test.svg"
     with open(file_name, "w") as f:
