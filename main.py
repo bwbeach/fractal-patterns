@@ -30,6 +30,7 @@ class Elem:
         result.append("%s<%s%s>\n" % (spaces, self.name, attrs,))
         for s in self.sub_elems:
             result.append(s.format(indent=indent+1))
+        result.append("%s</%s>\n" % (spaces, self.name,))
         return "".join(result)
 
 
@@ -118,6 +119,30 @@ class FourSquaresOnSide(SidedSegment):
             ]
 
 
+class TwoTrianglesOnSide(SidedSegment):
+    """
+
+                   .
+                  / \
+    -------      /   \
+    """
+    def step(self):
+        half = (self.p2 - self.p1) * 0.5
+        if self.side == "left":
+            up_half = half.left(math.pi / 2)
+            mid = self.p1 + half + up_half
+            return [
+                TwoTrianglesOnSide(self.p1, mid, "right"),
+                TwoTrianglesOnSide(mid, self.p2, "right")
+            ]
+        else:
+            down_half = half.right(math.pi / 2)
+            mid = self.p1 + half + down_half
+            return [
+                TwoTrianglesOnSide(self.p1, mid, "left"),
+                TwoTrianglesOnSide(mid, self.p2, "left")
+            ]
+
 def fractal(elem, depth):
     """
     Given a single element, returns the list of elements that replace it.
@@ -161,7 +186,7 @@ def points_to_stroke_d(points):
 
 def make_pattern():
     # elems = fractal(LineSegment(Point(25, 50), Point(75, 50)), left_triangle, 1)
-    init = FourSquaresOnSide(Point(0, 100), Point(100, 100), "left")
+    init = TwoTrianglesOnSide(Point(0, 100), Point(100, 100), "left")
     elems = fractal(init, 7)
     points = segments_to_points(elems)
     d = points_to_stroke_d(points)
