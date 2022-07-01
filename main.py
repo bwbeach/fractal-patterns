@@ -82,11 +82,16 @@ class SidedSegment:
         self.p2 = p2
         self.side = side
 
-    def up_half_across_and_down(self):
-        """
-        One step in a fractal.
-        TODO: figure out how to describe this.
-        """
+
+class FourSquaresOnSide(SidedSegment):
+    """
+
+
+                    |------|
+                    |      |
+    --------        |      |
+    """
+    def step(self):
         if self.side == "left":
             v_half = (self.p2 - self.p1) * 0.5
             v_up = v_half.left(math.pi / 2)
@@ -94,10 +99,10 @@ class SidedSegment:
             p_b = p_a + v_half
             p_c = self.p2 + v_up
             return [
-                SidedSegment(self.p1, p_a, "right"),
-                SidedSegment(p_a, p_b, "left"),
-                SidedSegment(p_b, p_c, "left"),
-                SidedSegment(p_c, self.p2, "right")
+                FourSquaresOnSide(self.p1, p_a, "right"),
+                FourSquaresOnSide(p_a, p_b, "left"),
+                FourSquaresOnSide(p_b, p_c, "left"),
+                FourSquaresOnSide(p_c, self.p2, "right")
             ]
         else:
             v_half = (self.p2 - self.p1) * 0.5
@@ -106,14 +111,14 @@ class SidedSegment:
             p_b = p_a + v_half
             p_c = self.p2 + v_down
             return [
-                SidedSegment(self.p1, p_a, "left"),
-                SidedSegment(p_a, p_b, "right"),
-                SidedSegment(p_b, p_c, "right"),
-                SidedSegment(p_c, self.p2, "left")
+                FourSquaresOnSide(self.p1, p_a, "left"),
+                FourSquaresOnSide(p_a, p_b, "right"),
+                FourSquaresOnSide(p_b, p_c, "right"),
+                FourSquaresOnSide(p_c, self.p2, "left")
             ]
 
 
-def fractal(elem, f, depth):
+def fractal(elem, depth):
     """
     Given a single element, returns the list of elements that replace it.
     :param elem:
@@ -124,26 +129,8 @@ def fractal(elem, f, depth):
     if depth == 0:
         return [elem]
     else:
-        sub_elems = f(elem)
-        return list(itertools.chain(*(fractal(e, f, depth - 1) for e in sub_elems)))
-
-
-def left_triangle(elem):
-    """
-    Each line segment owns a right equilateral triangle on its left side.
-    """
-    p1 = elem.p1
-    p2 = elem.p2
-    fwd = (p2 - p1) * 0.5
-    left = fwd.left(math.pi / 2)
-    mid = p1 + fwd
-    up = mid + left
-    return [
-        LineSegment(p1, mid),
-        LineSegment(mid, up),
-        LineSegment(up, mid),
-        LineSegment(mid, p2)
-    ]
+        sub_elems = elem.step()
+        return list(itertools.chain(*(fractal(e, depth - 1) for e in sub_elems)))
 
 
 def segments_to_points(segments):
@@ -174,8 +161,8 @@ def points_to_stroke_d(points):
 
 def make_pattern():
     # elems = fractal(LineSegment(Point(25, 50), Point(75, 50)), left_triangle, 1)
-    init = SidedSegment(Point(0, 100), Point(100, 100), "left")
-    elems = fractal(init, SidedSegment.up_half_across_and_down, 6)
+    init = FourSquaresOnSide(Point(0, 100), Point(100, 100), "left")
+    elems = fractal(init, 7)
     points = segments_to_points(elems)
     d = points_to_stroke_d(points)
     doc = Elem(
