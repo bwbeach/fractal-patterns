@@ -5,14 +5,32 @@ Experiments in generating fractal shapes to an SVG file for use on a
 quilting machine or Cricut.
 """
 
-import abc
 import itertools
 import math
 
-PRE = """<?xml version="1.0"?>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="200.000mm" height="200.000mm" viewBox="0.000,0.000,100.000,100.000">"""
 
-POST = "</svg>"
+class Elem:
+    """
+    An XML element that knows how to serialize itself with str()
+    """
+    def __init__(self, name, attributes, *sub_elems):
+        self.name = name
+        self.attributes = attributes
+        self.sub_elems = sub_elems
+
+    def format(self, indent=0):
+        spaces = "  " * indent
+        result = []
+        if indent == 0:
+            result.append('<?xml version="1.0"?>\n')
+        attrs = "".join(
+            ' %s="%s"' % (k.replace("_", "-"), v)
+            for k, v in self.attributes.items()
+        )
+        result.append("%s<%s%s>\n" % (spaces, self.name, attrs,))
+        for s in self.sub_elems:
+            result.append(s.format(indent=indent+1))
+        return "".join(result)
 
 
 class Point:
@@ -157,11 +175,32 @@ def points_to_stroke_d(points):
 def make_pattern():
     # elems = fractal(LineSegment(Point(25, 50), Point(75, 50)), left_triangle, 1)
     init = SidedSegment(Point(0, 100), Point(100, 100), "left")
-    elems = fractal(init, SidedSegment.up_half_across_and_down, 5)
+    elems = fractal(init, SidedSegment.up_half_across_and_down, 6)
     points = segments_to_points(elems)
     d = points_to_stroke_d(points)
-    path_element = '<path stroke="#000000" fill="none" stroke-width="0.25" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10.000" d="%s"/>' % d
-    svg = PRE + path_element + POST
+    doc = Elem(
+        "svg",
+        dict(
+            xmlns="http://www.w3.org/2000/svg",
+            version="1.1",
+            width="200.000mm",
+            height="200.000mm",
+            viewBox="0.000,0.000,100.000,100.000",
+        ),
+        Elem(
+            "path",
+            dict(
+                stroke="#000000",
+                fill="none",
+                stroke_width="0.25",
+                stroke_linecap="round",
+                stroke_linejoin="round",
+                stroke_miterlimit="10.000",
+                d=d
+            )
+        )
+    )
+    svg = doc.format()
     file_name = "/Users/brianb/test.svg"
     with open(file_name, "w") as f:
         f.write(svg)
